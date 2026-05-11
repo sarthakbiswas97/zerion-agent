@@ -16,3 +16,6 @@ ml/.venv/
 
 # Paper trading state
 data/portfolio.json
+
+# Documentation (generated/local)
+docs/
