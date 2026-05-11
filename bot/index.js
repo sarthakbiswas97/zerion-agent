@@ -2,16 +2,26 @@
  * Telegram bot entry point for the Zerion Trading Agent.
  *
  * Commands:
- *   /predict - Get ML prediction for SOL/USDC
- *   /trade <amount> - Execute swap based on prediction
- *   /status  - Show wallet portfolio
- *   /policy  - Show active trading policies
- *   /help    - Show available commands
+ *   /predict  - Get ML prediction for SOL/USDC
+ *   /trade    - Paper trade based on prediction
+ *   /status   - Show paper portfolio and P&L
+ *   /history  - Show recent trade history
+ *   /reset    - Reset portfolio to seed balances
+ *   /policy   - Show active trading policies
+ *   /help     - Show available commands
  */
 
 import "dotenv/config";
 import TelegramBot from "node-telegram-bot-api";
-import { handlePredict, handleTrade, handleStatus, handlePolicy, handleHelp } from "./commands.js";
+import {
+  handlePredict,
+  handleTrade,
+  handleStatus,
+  handleHistory,
+  handleReset,
+  handlePolicy,
+  handleHelp,
+} from "./commands.js";
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 if (!TOKEN) {
@@ -24,8 +34,10 @@ const bot = new TelegramBot(TOKEN, { polling: true });
 bot.onText(/\/predict/, (msg) => handlePredict(bot, msg));
 bot.onText(/\/trade(.*)/, (msg, match) => handleTrade(bot, msg, match));
 bot.onText(/\/status/, (msg) => handleStatus(bot, msg));
+bot.onText(/\/history/, (msg) => handleHistory(bot, msg));
+bot.onText(/\/reset/, (msg) => handleReset(bot, msg));
 bot.onText(/\/policy/, (msg) => handlePolicy(bot, msg));
 bot.onText(/\/help/, (msg) => handleHelp(bot, msg));
 bot.onText(/\/start/, (msg) => handleHelp(bot, msg));
 
-console.log("Zerion Trading Agent bot is running...");
+console.log("Zerion Trading Agent bot is running (paper trading mode)...");
