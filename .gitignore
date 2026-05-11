@@ -1,0 +1,15 @@
+node_modules/
+.env
+.env.local
+.DS_Store
+.idea/
+*.bak
+AGENTS.md
+
+# ML artifacts
+ml/__pycache__/
+ml/*.pyc
+ml/.venv/
+
+# Zerion config (contains wallet keys)
+.zerion/
