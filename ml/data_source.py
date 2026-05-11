@@ -13,7 +13,7 @@ import httpx
 logger = logging.getLogger(__name__)
 
 BIRDEYE_BASE_URL = "https://public-api.birdeye.so"
-SOLUSDC_PAIR = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2"
+SOL_TOKEN = "So11111111111111111111111111111111111111112"
 COINGECKO_URL = "https://api.coingecko.com/api/v3/coins/solana/ohlc"
 
 MIN_CANDLES = 100
@@ -35,11 +35,11 @@ async def fetch_birdeye_candles(count: int = 150) -> list[Candle]:
         raise RuntimeError("BIRDEYE_API_KEY not set")
 
     now = int(datetime.now(tz=timezone.utc).timestamp())
-    time_from = now - (count * 60 + 300)
+    time_from = now - 86400  # 24 hours to ensure enough candles despite gaps
 
     headers = {"X-API-KEY": api_key, "accept": "application/json"}
     params = {
-        "address": SOLUSDC_PAIR,
+        "address": SOL_TOKEN,
         "type": "1m",
         "time_from": time_from,
         "time_to": now,
