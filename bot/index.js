@@ -13,6 +13,7 @@
 
 import "dotenv/config";
 import TelegramBot from "node-telegram-bot-api";
+import { getHealth } from "./ml-client.js";
 import {
   handlePredict,
   handleTrade,
@@ -45,5 +46,12 @@ bot.onText(/\/status/, (msg) => handleStatus(bot, msg));
 bot.onText(/\/history/, (msg) => handleHistory(bot, msg));
 bot.onText(/\/reset/, (msg) => handleReset(bot, msg));
 bot.onText(/\/policy/, (msg) => handlePolicy(bot, msg));
+
+try {
+  await getHealth();
+  console.log("ML service: connected");
+} catch {
+  console.warn("WARNING: ML service unreachable, /predict will fail");
+}
 
 console.log("Zerion Trading Agent bot is running (paper trading mode)...");
