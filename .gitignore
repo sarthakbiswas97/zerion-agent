@@ -13,3 +13,6 @@ ml/.venv/
 
 # Zerion config (contains wallet keys)
 .zerion/
+
+# Paper trading state
+data/portfolio.json
