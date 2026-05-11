@@ -160,7 +160,7 @@ What judges see when interacting with the Telegram bot:
 ```
 ML PREDICTION - SOL/USDC
 
-Current Price: $170.42
+Current Price: $93.12
 Direction: UP
 Confidence: 68.3% [=======   ]
 Suggested Action: BUY SOL with USDC
@@ -180,16 +180,16 @@ Use /trade <amount> to act on this signal
 PAPER TRADE EXECUTED
 
 What happened:
-BOUGHT 0.058685 SOL
+BOUGHT 0.107411 SOL
 Paid: 10.00 USDC
-Price: $170.40 per SOL
+Price: $93.10 per SOL
 
 Signal: UP at 68.3% confidence
 Trade ID: #3
 
 Wallet After Trade:
     USDC: $90.00
-    SOL:  0.558685
+    SOL:  0.607411
 
 This is a paper trade using real live prices.
 Use /status to see portfolio P&L
@@ -202,12 +202,12 @@ PAPER PORTFOLIO
 
 Current Holdings:
     USDC: $90.00
-    SOL:  0.558685
+    SOL:  0.607411
 
 Valuation:
-    Current Value: $185.20
-    Starting Value: $185.00
-    PROFIT: +$0.20 (+0.11%)
+    Current Value: $146.53
+    Starting Value: $146.50
+    PROFIT: +$0.03 (+0.02%)
 
 Stats:
     Trades Executed: 3
