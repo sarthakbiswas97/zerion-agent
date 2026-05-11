@@ -151,6 +151,118 @@ Three constraints in one policy:
 
 **Paper trading:** The default mode uses real live prices from Birdeye but records trades locally instead of broadcasting. The portfolio starts with 100 USDC + 0.5 SOL and tracks P&L against the seed value.
 
+## Demo Output
+
+What judges see when interacting with the Telegram bot:
+
+### `/predict` -- ML Prediction with Explanation
+
+```
+ML PREDICTION - SOL/USDC
+
+Current Price: $170.42
+Direction: UP
+Confidence: 68.3% [=======   ]
+Suggested Action: BUY SOL with USDC
+
+Why? (SHAP Analysis):
+Top 3 features driving this prediction:
+    ^ RSI: pushes UP
+    ^ EMA Ratio: pushes UP
+    v Volume Spike: pushes DOWN
+
+Use /trade <amount> to act on this signal
+```
+
+### `/trade 10` -- Paper Trade Execution
+
+```
+PAPER TRADE EXECUTED
+
+What happened:
+BOUGHT 0.058685 SOL
+Paid: 10.00 USDC
+Price: $170.40 per SOL
+
+Signal: UP at 68.3% confidence
+Trade ID: #3
+
+Wallet After Trade:
+    USDC: $90.00
+    SOL:  0.558685
+
+This is a paper trade using real live prices.
+Use /status to see portfolio P&L
+```
+
+### `/status` -- Portfolio and P&L
+
+```
+PAPER PORTFOLIO
+
+Current Holdings:
+    USDC: $90.00
+    SOL:  0.558685
+
+Valuation:
+    Current Value: $185.20
+    Starting Value: $185.00
+    PROFIT: +$0.20 (+0.11%)
+
+Stats:
+    Trades Executed: 3
+    Active Since: 2026-05-11
+
+Portfolio seeded with 100 USDC + 0.5 SOL
+All prices are live from Birdeye API
+```
+
+## Going Live: Real On-Chain Mode
+
+Paper trading uses real live prices from Birdeye but records trades in a local JSON file. To switch to real on-chain execution on Solana mainnet, no code changes are needed -- just configure a funded wallet and agent token.
+
+### Steps
+
+1. **Create a wallet:**
+
+```bash
+node cli/zerion.js wallet create --name main
+```
+
+2. **Fund the wallet** with SOL (for gas) and USDC (for trading). Send tokens to the wallet address shown by:
+
+```bash
+node cli/zerion.js portfolio --wallet main
+```
+
+3. **Create security policies:**
+
+```bash
+./scripts/setup-policies.sh
+```
+
+This creates `solana-lock` (chain restriction) and `safe-trading` (deny-transfers, deny-approvals, 24h expiry).
+
+4. **Create an agent token** bound to the wallet and policies:
+
+```bash
+./scripts/setup-token.sh main
+```
+
+The script reads policy IDs from `zerion agent list-policies`, then runs:
+
+```bash
+node cli/zerion.js agent create-token --name main-agent --wallet main --policy <policy-ids>
+```
+
+5. **Set the token** in `.env`:
+
+```
+ZERION_AGENT_TOKEN=<token from step 4>
+```
+
+Once configured, `/trade` executes real swaps on Solana via Jupiter routing. Policies enforce guardrails at the OWS signing layer -- the bot cannot bypass them.
+
 ## Quickstart
 
 ### Prerequisites
