@@ -2,18 +2,24 @@
  * Telegram command handlers for the trading agent.
  */
 
-import { getPrediction, getHealth } from "./ml-client.js";
-import { executeSwap, getPortfolio, listPolicies } from "./zerion-bridge.js";
+import { getPrediction } from "./ml-client.js";
+import { listPolicies } from "./zerion-bridge.js";
+import {
+  executePaperTrade,
+  getPortfolioValue,
+  getTrades,
+  resetPortfolio,
+} from "./paper-portfolio.js";
 import {
   formatPrediction,
-  formatTrade,
+  formatPaperTrade,
   formatPortfolio,
+  formatHistory,
   formatPolicies,
   formatHelp,
 } from "./formatter.js";
 
 const CONFIDENCE_THRESHOLD = 0.55;
-const DEFAULT_CHAIN = "solana";
 
 async function sendMarkdown(bot, chatId, text) {
   try {
@@ -37,16 +43,19 @@ export async function handlePredict(bot, msg) {
 
 export async function handleTrade(bot, msg, match) {
   const chatId = msg.chat.id;
-  const rawAmount = match?.[1]?.trim();
+  const rawInput = match?.[1]?.trim() || "";
+  const parts = rawInput.split(/\s+/);
+  const amountStr = parts[0];
+  const hasForce = parts.includes("force");
 
-  if (!rawAmount || isNaN(parseFloat(rawAmount))) {
-    await bot.sendMessage(chatId, "Usage: /trade <amount>\nExample: /trade 1");
+  if (!amountStr || isNaN(parseFloat(amountStr))) {
+    await bot.sendMessage(chatId, "Usage: /trade <amount>\nExample: /trade 10");
     return;
   }
 
-  const amount = parseFloat(rawAmount);
+  const amount = parseFloat(amountStr);
 
-  await bot.sendMessage(chatId, "Getting prediction and preparing trade...");
+  await bot.sendMessage(chatId, "Getting prediction...");
 
   let prediction;
   try {
@@ -56,43 +65,56 @@ export async function handleTrade(bot, msg, match) {
     return;
   }
 
-  if (prediction.confidence < CONFIDENCE_THRESHOLD) {
+  if (prediction.confidence < CONFIDENCE_THRESHOLD && !hasForce) {
     await bot.sendMessage(
       chatId,
       `Low confidence: ${(prediction.confidence * 100).toFixed(1)}% (threshold: ${CONFIDENCE_THRESHOLD * 100}%)\n` +
       `Direction: ${prediction.direction}\n` +
-      `Trade skipped. Use /trade ${rawAmount} force to override.`
+      `Trade skipped. Use /trade ${amountStr} force to override.`
     );
-
-    if (!rawAmount.includes("force")) return;
+    return;
   }
 
-  const isUp = prediction.direction === "UP";
-  const fromToken = isUp ? "USDC" : "SOL";
-  const toToken = isUp ? "SOL" : "USDC";
+  const result = executePaperTrade({
+    direction: prediction.direction,
+    confidence: prediction.confidence,
+    amount,
+    price: prediction.price,
+  });
 
-  await bot.sendMessage(
-    chatId,
-    `Executing: ${amount} ${fromToken} -> ${toToken} on ${DEFAULT_CHAIN}...`
-  );
-
-  try {
-    const result = await executeSwap(DEFAULT_CHAIN, amount, fromToken, toToken);
-    await sendMarkdown(bot, chatId, formatTrade(prediction, result));
-  } catch (err) {
-    await bot.sendMessage(chatId, `Trade failed: ${err.message}`);
+  if (!result.success) {
+    await bot.sendMessage(chatId, `Trade failed: ${result.error}`);
+    return;
   }
+
+  await sendMarkdown(bot, chatId, formatPaperTrade(result.trade, result.balances));
 }
 
 export async function handleStatus(bot, msg) {
   const chatId = msg.chat.id;
 
   try {
-    const data = await getPortfolio();
+    const prediction = await getPrediction();
+    const data = getPortfolioValue(prediction.price);
     await sendMarkdown(bot, chatId, formatPortfolio(data));
   } catch (err) {
-    await bot.sendMessage(chatId, `Portfolio fetch failed: ${err.message}`);
+    await bot.sendMessage(chatId, `Status failed: ${err.message}`);
   }
+}
+
+export async function handleHistory(bot, msg) {
+  const chatId = msg.chat.id;
+  const trades = getTrades().slice(-10).reverse();
+  await sendMarkdown(bot, chatId, formatHistory(trades));
+}
+
+export async function handleReset(bot, msg) {
+  const chatId = msg.chat.id;
+  const balances = resetPortfolio();
+  await bot.sendMessage(
+    chatId,
+    `Portfolio reset to seed balances:\nUSDC: ${balances.USDC}\nSOL: ${balances.SOL}`
+  );
 }
 
 export async function handlePolicy(bot, msg) {
