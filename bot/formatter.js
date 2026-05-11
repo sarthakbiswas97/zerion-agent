@@ -6,9 +6,12 @@ function escMd(text) {
   return String(text).replace(/[_*[\]()~`>#+\-=|{}.!]/g, "\\$&");
 }
 
+function fmtNum(n, decimals = 2) {
+  return Number(n).toFixed(decimals);
+}
+
 export function formatPrediction(pred) {
-  const arrow = pred.direction === "UP" ? "UP" : "DOWN";
-  const pct = (pred.confidence * 100).toFixed(1);
+  const pct = fmtNum(pred.confidence * 100, 1);
 
   const shapLines = Object.entries(pred.shap_explanation || {})
     .map(([name, info]) => `  ${escMd(name)}: ${escMd(info.direction)} \\(${escMd(info.value)}\\)`)
@@ -17,51 +20,64 @@ export function formatPrediction(pred) {
   return [
     `*SOL/USDC Prediction*`,
     ``,
-    `Direction: *${escMd(arrow)}*`,
+    `Direction: *${escMd(pred.direction)}*`,
     `Confidence: *${escMd(pct)}%*`,
-    `Price: \\$${escMd(Number(pred.price).toFixed(2))}`,
+    `Price: \\$${escMd(fmtNum(pred.price))}`,
     ``,
     `*Key Factors:*`,
     shapLines,
   ].join("\n");
 }
 
-export function formatTrade(prediction, swapResult) {
-  const tx = swapResult.tx || {};
-  const swap = swapResult.swap || {};
-
+export function formatPaperTrade(trade, balances) {
   return [
-    `*Trade Executed*`,
+    `*Paper Trade Executed*`,
     ``,
-    `Signal: *${escMd(prediction.direction)}* \\(${escMd((prediction.confidence * 100).toFixed(1))}%\\)`,
-    `Swap: ${escMd(swap.input || "?")} \\-\\> ${escMd(swap.output || "?")}`,
-    `Chain: ${escMd(swapResult.swap?.chain || "solana")}`,
-    `TX: \`${escMd(tx.hash || "pending")}\``,
-    `Status: ${escMd(tx.status || "submitted")}`,
+    `Signal: *${escMd(trade.direction)}* \\(${escMd(fmtNum(trade.confidence * 100, 1))}%\\)`,
+    `Swap: ${escMd(fmtNum(trade.fromAmount, 4))} ${escMd(trade.from)} \\-\\> ${escMd(fmtNum(trade.toAmount, 4))} ${escMd(trade.to)}`,
+    `Price: \\$${escMd(fmtNum(trade.price))}`,
+    `Trade \\#${escMd(trade.id)}`,
+    ``,
+    `*Updated Balances:*`,
+    `  USDC: ${escMd(fmtNum(balances.USDC, 2))}`,
+    `  SOL: ${escMd(fmtNum(balances.SOL, 6))}`,
   ].join("\n");
 }
 
 export function formatPortfolio(data) {
-  if (!data || (!data.totalValue && !data.positions)) {
-    return `*Portfolio*\n\nNo data available\\. Make sure your wallet is funded\\.`;
+  const pnlSign = data.pnl >= 0 ? "\\+" : "";
+
+  return [
+    `*Paper Portfolio*`,
+    ``,
+    `*Balances:*`,
+    `  USDC: ${escMd(fmtNum(data.balances.USDC, 2))}`,
+    `  SOL: ${escMd(fmtNum(data.balances.SOL, 6))}`,
+    ``,
+    `Total Value: *\\$${escMd(fmtNum(data.currentValue))}*`,
+    `Seed Value: \\$${escMd(fmtNum(data.seedValue))}`,
+    `P&L: ${pnlSign}${escMd(fmtNum(data.pnl))} \\(${pnlSign}${escMd(fmtNum(data.pnlPercent, 2))}%\\)`,
+    ``,
+    `Trades: ${escMd(data.tradeCount)}`,
+    `Since: ${escMd(data.createdAt?.split("T")[0] || "unknown")}`,
+  ].join("\n");
+}
+
+export function formatHistory(trades) {
+  if (!trades.length) {
+    return `*Trade History*\n\nNo trades yet\\. Use /trade <amount> to start\\.`;
   }
 
-  const lines = [`*Portfolio Overview*`, ``];
+  const lines = [`*Trade History* \\(last ${escMd(trades.length)}\\)`, ``];
 
-  if (data.totalValue) {
-    lines.push(`Total Value: *\\$${escMd(data.totalValue)}*`);
-    lines.push(``);
-  }
-
-  const positions = data.positions || data.topPositions || [];
-  if (positions.length > 0) {
-    lines.push(`*Positions:*`);
-    for (const pos of positions.slice(0, 10)) {
-      const symbol = pos.symbol || pos.name || "?";
-      const value = pos.value ? `$${pos.value}` : "";
-      const amount = pos.quantity || pos.amount || "";
-      lines.push(`  ${escMd(symbol)}: ${escMd(amount)} ${escMd(value)}`);
-    }
+  for (const t of trades) {
+    const time = t.timestamp?.split("T")[1]?.slice(0, 8) || "";
+    const conf = fmtNum(t.confidence * 100, 0);
+    lines.push(
+      `\\#${escMd(t.id)} ${escMd(time)} *${escMd(t.direction)}* ${escMd(conf)}% ` +
+      `${escMd(fmtNum(t.fromAmount, 2))} ${escMd(t.from)} \\-\\> ${escMd(fmtNum(t.toAmount, 4))} ${escMd(t.to)} ` +
+      `@\\$${escMd(fmtNum(t.price))}`
+    );
   }
 
   return lines.join("\n");
@@ -104,11 +120,13 @@ export function formatPolicies(data) {
 
 export function formatHelp() {
   return [
-    `*Zerion Trading Agent*`,
+    `*Zerion Trading Agent \\(Paper Mode\\)*`,
     ``,
     `/predict \\- Get ML prediction for SOL/USDC`,
-    `/trade <amount> \\- Execute swap based on prediction`,
-    `/status \\- Show wallet portfolio`,
+    `/trade <amount> \\- Paper trade based on prediction`,
+    `/status \\- Show paper portfolio and P&L`,
+    `/history \\- Show recent trade history`,
+    `/reset \\- Reset portfolio to seed balances`,
     `/policy \\- Show active trading policies`,
     `/help \\- Show this message`,
   ].join("\n");
