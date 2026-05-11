@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zerion AI Trading Agent</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    .policy-card {
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      background: rgba(16, 185, 129, 0.05);
+    }
+    .policy-card:hover {
+      border-color: rgba(16, 185, 129, 0.5);
+      background: rgba(16, 185, 129, 0.08);
+    }
+    .flow-arrow {
+      color: #06b6d4;
+    }
+    .accent-border {
+      border-left: 3px solid #10b981;
+    }
+  </style>
+</head>
+<body class="bg-gray-950 text-gray-200 antialiased">
+
+  <!-- Slide 1: Title -->
+  <section class="min-h-screen flex items-center py-20 px-8">
+    <div class="max-w-4xl mx-auto text-center">
+      <p class="text-emerald-400 font-mono text-sm tracking-widest uppercase mb-6">Frontier Hackathon &mdash; Zerion CLI Track</p>
+      <h1 class="text-5xl sm:text-6xl font-bold text-white mb-6 leading-tight">
+        Zerion AI Trading Agent
+      </h1>
+      <p class="text-xl text-gray-400 mb-10 max-w-2xl mx-auto">
+        Autonomous trading with fail-closed policy guardrails
+      </p>
+      <p class="text-gray-500 mb-12">Built by Sarthak Biswas</p>
+      <div class="flex items-center justify-center gap-6 text-sm">
+        <a href="https://t.me/Zerion_trading_bot" target="_blank" rel="noopener"
+           class="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors font-medium">
+          Telegram Bot
+        </a>
+        <a href="https://github.com/sarthakbiswas97/zerion-agent" target="_blank" rel="noopener"
+           class="inline-flex items-center gap-2 px-5 py-2.5 border border-gray-700 hover:border-gray-500 text-gray-300 hover:text-white rounded-lg transition-colors font-medium">
+          GitHub
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 2: The Problem -->
+  <section class="py-20 px-8">
+    <div class="max-w-4xl mx-auto">
+      <p class="text-emerald-400 font-mono text-sm tracking-widest uppercase mb-4">The Problem</p>
+      <h2 class="text-3xl sm:text-4xl font-bold text-white mb-12">
+        Autonomous agents need guardrails you can trust
+      </h2>
+      <div class="space-y-8">
+        <div class="accent-border pl-6 py-2">
+          <p class="text-lg text-gray-300 font-medium mb-1">What if the agent gets compromised?</p>
+          <p class="text-gray-500">A stolen key, a prompt injection, a logic bug &mdash; any of these can turn an agent hostile.</p>
+        </div>
+        <div class="accent-border pl-6 py-2">
+          <p class="text-lg text-red-400 font-medium mb-1">With a normal bot, the attacker drains everything.</p>
+          <p class="text-gray-500">Unrestricted wallet access means total loss. No safety net.</p>
+        </div>
+        <div class="accent-border pl-6 py-2" style="border-color: #10b981;">
+          <p class="text-lg text-emerald-400 font-medium mb-1">With Zerion policies, they physically can't.</p>
+          <p class="text-gray-500">Scoped permissions, deny-by-default, time-limited tokens. The infrastructure enforces the rules, not the code.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 3: Architecture -->
+  <section class="py-20 px-8 bg-gray-900/40">
+    <div class="max-w-4xl mx-auto">
+      <p class="text-cyan-400 font-mono text-sm tracking-widest uppercase mb-4">Architecture</p>
+      <h2 class="text-3xl sm:text-4xl font-bold text-white mb-12">
+        System Overview
+      </h2>
+      <div class="grid grid-cols-1 sm:grid-cols-5 gap-4 items-center text-center mb-12">
+        <!-- User -->
+        <div class="bg-gray-800 rounded-xl p-5 border border-gray-700">
+          <p class="text-sm text-gray-500 mb-1">User</p>
+          <p class="text-white font-semibold">Telegram</p>
+        </div>
+        <p class="flow-arrow text-2xl font-bold hidden sm:block">&rarr;</p>
+        <!-- Bot -->
+        <div class="bg-gray-800 rounded-xl p-5 border border-gray-700">
+          <p class="text-sm text-gray-500 mb-1">Bot</p>
+          <p class="text-white font-semibold">Node.js</p>
+        </div>
+        <p class="flow-arrow text-2xl font-bold hidden sm:block">&rarr;</p>
+        <!-- Services -->
+        <div class="space-y-3">
+          <div class="bg-gray-800 rounded-xl p-4 border border-emerald-800">
+            <p class="text-sm text-emerald-400 font-semibold">ML Service</p>
+            <p class="text-xs text-gray-500">XGBoost + SHAP</p>
+          </div>
+          <div class="bg-gray-800 rounded-xl p-4 border border-cyan-800">
+            <p class="text-sm text-cyan-400 font-semibold">Zerion CLI</p>
+            <p class="text-xs text-gray-500">Swap via Jupiter</p>
+          </div>
+        </div>
+      </div>
+      <div class="bg-gray-800/60 rounded-xl p-6 border border-gray-700">
+        <p class="text-cyan-400 font-mono text-sm mb-3">Zerion CLI Components</p>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+          <div class="text-center">
+            <p class="text-white font-medium">Policy Engine</p>
+            <p class="text-gray-500">Deny-by-default rules</p>
+          </div>
+          <div class="text-center">
+            <p class="text-white font-medium">Agent Token</p>
+            <p class="text-gray-500">Scoped, time-limited</p>
+          </div>
+          <div class="text-center">
+            <p class="text-white font-medium">Swap Execution</p>
+            <p class="text-gray-500">Jupiter Aggregator</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 4: Policy Design -->
+  <section class="py-20 px-8">
+    <div class="max-w-4xl mx-auto">
+      <p class="text-emerald-400 font-mono text-sm tracking-widest uppercase mb-4">Key Differentiator</p>
+      <h2 class="text-3xl sm:text-4xl font-bold text-white mb-12">
+        Policy Design
+      </h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-10">
+        <!-- solana-lock -->
+        <div class="policy-card rounded-xl p-6 transition-all">
+          <p class="font-mono text-emerald-400 text-sm mb-2">solana-lock</p>
+          <p class="text-white font-semibold text-lg mb-2">Chain Restriction</p>
+          <p class="text-gray-400 text-sm">Restricts agent to Solana only. Any attempt to interact with other chains is automatically denied.</p>
+        </div>
+        <!-- safe-trading -->
+        <div class="policy-card rounded-xl p-6 transition-all">
+          <p class="font-mono text-emerald-400 text-sm mb-2">safe-trading</p>
+          <p class="text-white font-semibold text-lg mb-2">Operation Limits</p>
+          <p class="text-gray-400 text-sm">Deny transfers, deny approvals, 24h expiry. Only swaps are permitted, nothing else.</p>
+        </div>
+      </div>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-4">
+        <div class="flex items-start gap-3">
+          <span class="text-emerald-400 font-bold text-lg leading-none mt-0.5">*</span>
+          <p class="text-gray-300"><span class="text-white font-medium">Fail-closed:</span> if anything unexpected happens, the default is <span class="text-red-400 font-mono">DENY</span>.</p>
+        </div>
+        <div class="flex items-start gap-3">
+          <span class="text-emerald-400 font-bold text-lg leading-none mt-0.5">*</span>
+          <p class="text-gray-300"><span class="text-white font-medium">Scoped:</span> only the operations you explicitly allow.</p>
+        </div>
+        <div class="flex items-start gap-3">
+          <span class="text-emerald-400 font-bold text-lg leading-none mt-0.5">*</span>
+          <p class="text-gray-300"><span class="text-white font-medium">Time-limited:</span> tokens expire automatically.</p>
+        </div>
+        <div class="flex items-start gap-3">
+          <span class="text-emerald-400 font-bold text-lg leading-none mt-0.5">*</span>
+          <p class="text-gray-300"><span class="text-white font-medium">Revocable:</span> owner can revoke at any time.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 5: ML Pipeline -->
+  <section class="py-20 px-8 bg-gray-900/40">
+    <div class="max-w-4xl mx-auto">
+      <p class="text-cyan-400 font-mono text-sm tracking-widest uppercase mb-4">ML Pipeline</p>
+      <h2 class="text-3xl sm:text-4xl font-bold text-white mb-12">
+        XGBoost + SHAP &mdash; Explainable Predictions
+      </h2>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
+        <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+          <p class="text-3xl font-bold text-emerald-400 mb-2">14</p>
+          <p class="text-white font-medium">Technical Indicators</p>
+          <p class="text-gray-500 text-sm mt-1">RSI, MACD, Bollinger, EMA, OBV, and more</p>
+        </div>
+        <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+          <p class="text-3xl font-bold text-cyan-400 mb-2">55%</p>
+          <p class="text-white font-medium">Min Confidence</p>
+          <p class="text-gray-500 text-sm mt-1">Below threshold, agent holds position</p>
+        </div>
+        <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+          <p class="text-3xl font-bold text-white mb-2">2</p>
+          <p class="text-white font-medium">Data Sources</p>
+          <p class="text-gray-500 text-sm mt-1">Birdeye live data, CoinGecko fallback</p>
+        </div>
+      </div>
+      <div class="bg-gray-800/60 rounded-xl p-6 border border-gray-700">
+        <p class="text-sm text-gray-400 font-mono mb-4">Telegram Commands</p>
+        <div class="flex flex-wrap gap-3">
+          <span class="px-3 py-1.5 bg-gray-900 rounded-lg text-emerald-400 font-mono text-sm border border-gray-700">/predict</span>
+          <span class="px-3 py-1.5 bg-gray-900 rounded-lg text-emerald-400 font-mono text-sm border border-gray-700">/trade</span>
+          <span class="px-3 py-1.5 bg-gray-900 rounded-lg text-emerald-400 font-mono text-sm border border-gray-700">/status</span>
+          <span class="px-3 py-1.5 bg-gray-900 rounded-lg text-emerald-400 font-mono text-sm border border-gray-700">/history</span>
+          <span class="px-3 py-1.5 bg-gray-900 rounded-lg text-emerald-400 font-mono text-sm border border-gray-700">/policy</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 6: Try It -->
+  <section class="py-20 px-8">
+    <div class="max-w-4xl mx-auto text-center">
+      <p class="text-emerald-400 font-mono text-sm tracking-widest uppercase mb-4">Try It</p>
+      <h2 class="text-3xl sm:text-4xl font-bold text-white mb-6">
+        Paper Trading: Live Prices, Real ML, Zero Risk
+      </h2>
+      <p class="text-gray-400 text-lg mb-4 max-w-xl mx-auto">
+        One config change to go mainnet.
+      </p>
+      <p class="text-gray-600 text-sm mb-12">
+        All trades execute against real-time prices using the ML pipeline. No funds at risk in paper mode.
+      </p>
+      <div class="flex items-center justify-center gap-6">
+        <a href="https://t.me/Zerion_trading_bot" target="_blank" rel="noopener"
+           class="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors font-medium text-lg">
+          Open Telegram Bot
+        </a>
+        <a href="https://github.com/sarthakbiswas97/zerion-agent" target="_blank" rel="noopener"
+           class="inline-flex items-center gap-2 px-6 py-3 border border-gray-700 hover:border-gray-500 text-gray-300 hover:text-white rounded-lg transition-colors font-medium text-lg">
+          View Source
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="py-8 px-8 border-t border-gray-800">
+    <div class="max-w-4xl mx-auto text-center text-gray-600 text-sm">
+      <p>Zerion AI Trading Agent &mdash; Frontier Hackathon 2026</p>
+    </div>
+  </footer>
+
+</body>
+</html>
