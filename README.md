@@ -1,135 +1,224 @@
 # Zerion AI Trading Agent
 
-Autonomous AI trading agent built on the [Zerion CLI](https://github.com/zeriontech/zerion-ai). Uses XGBoost ML predictions with SHAP explainability to execute real on-chain swaps on Solana, governed by scoped Zerion policies. Interface: Telegram bot.
+> Zerion CLI Track Submission -- Autonomous AI trading agent that uses ML predictions to execute real on-chain swaps on Solana, governed by scoped Zerion policies. Interface: Telegram bot.
+
+## What Is This
+
+A trading agent built on top of the [Zerion CLI](https://github.com/zeriontech/zerion-ai) that combines machine learning with on-chain execution. The agent fetches live SOL/USDC market data, runs an XGBoost classifier to predict price direction, explains its reasoning via SHAP, and executes real swaps through the Zerion API -- all within policy guardrails that limit what the agent can do.
+
+Users interact through a Telegram bot. No frontend needed -- the bot handles predictions, trade execution, portfolio monitoring, and policy inspection.
 
 ## Architecture
 
 ```
-Telegram Bot (Node.js)
-    |
-    +-- ML Prediction Service (Python FastAPI, port 8002)
-    |     +-- XGBoost model (14 features, binary UP/DOWN classifier)
-    |     +-- SHAP explanations (top 3 contributing features)
-    |     +-- Birdeye OHLCV data (150 x 1m candles for SOL/USDC)
-    |
-    +-- Zerion CLI (spawned as child process)
-    |     +-- Policy enforcement (fail-closed, runs before every tx)
-    |     +-- Swap execution via Zerion API (Jupiter routing on Solana)
-    |
-    +-- Scoped Policies
-          +-- solana-lock: restricts trading to Solana chain only
-          +-- safe-trading: deny raw transfers + deny approvals + 24h expiry
+                         User (Telegram)
+                              |
+                         Telegram Bot
+                        (Node.js ESM)
+                              |
+              +---------------+---------------+
+              |                               |
+     ML Prediction Service              Zerion CLI
+      (Python FastAPI:8002)          (child process)
+              |                               |
+   +----------+----------+          +--------+--------+
+   |          |          |          |        |        |
+ Birdeye   XGBoost    SHAP      Policy   Agent    Swap
+  OHLCV    Model    Explainer   Engine   Token   Execution
+   API    (14 feat)  (top 3)     |        |        |
+              |                  |        |        |
+              v                  v        v        v
+        Prediction          solana-lock   OWS    Zerion API
+        (UP/DOWN +          safe-trading  Sign   (Jupiter
+         confidence)        fail-closed          routing)
+                                                    |
+                                                    v
+                                              Solana Blockchain
+                                              (real on-chain tx)
 ```
+
+**Data flow for `/trade`:**
+1. Bot receives command from user
+2. ML service fetches 150 one-minute candles from Birdeye API
+3. Computes 14 technical indicators, normalizes, runs XGBoost inference
+4. If confidence exceeds threshold, bot calls Zerion CLI `swap` command
+5. CLI enforces policies (chain lock, deny-transfers, deny-approvals, expiry)
+6. If all policies pass, OWS signs the transaction using the agent token
+7. Zerion API routes the swap through Jupiter on Solana
+8. Bot reports tx hash and status back to user
+
+## Judging Criteria Alignment
+
+| Criteria | What We Built |
+|----------|---------------|
+| **Onchain Functionality** | Real SOL/USDC swaps on Solana mainnet via `zerion swap`. Transactions are signed by OWS and routed through Jupiter. At least 1 real on-chain tx executed. |
+| **Policy Design** | Two scoped Zerion policies: `solana-lock` (chain restriction) and `safe-trading` (deny-transfers + deny-approvals + 24h expiry). Fail-closed enforcement -- any policy failure blocks the tx. |
+| **Real-World Applicability** | Solves a real problem: autonomous trading with safety rails. The ML model provides data-driven signals with explainability (SHAP). Policies prevent the agent from draining funds or operating outside its scope. |
+| **Code Quality** | Modular architecture: ML service (Python), bot (Node.js), CLI (fork). Clean separation of concerns. No monolith. Each component is independently testable. |
+| **Demo Quality** | Telegram bot provides an interactive demo. Send `/predict` to see ML analysis, `/trade 1` to execute a real swap, `/policy` to inspect guardrails. |
+
+## Zerion Integration
+
+This project is a fork of [zeriontech/zerion-ai](https://github.com/zeriontech/zerion-ai). The Zerion CLI is used as-is -- the bot spawns it as a child process and parses its JSON output.
+
+**What we use from Zerion CLI:**
+
+- `zerion wallet create` -- Create an encrypted wallet (EVM + Solana)
+- `zerion agent create-policy` -- Define scoped trading policies
+- `zerion agent create-token` -- Generate agent token with policies attached
+- `zerion swap solana <amount> <from> <to>` -- Execute on-chain swaps
+- `zerion portfolio` -- Query wallet balances
+- `zerion agent list-policies` -- Inspect active policies
+
+**Agent token flow:**
+
+The agent token is a credential that allows unattended signing. It is bound to a specific wallet and set of policies. The token is passed via `ZERION_AGENT_TOKEN` environment variable -- no interactive passphrase needed at trade time.
+
+```
+wallet create --> create-policy --> create-token --> swap (uses token automatically)
+```
+
+## ML Prediction Pipeline
+
+The ML service runs as a standalone FastAPI server on port 8002.
+
+**Model:** XGBoost binary classifier trained on historical SOL/USDC data. Predicts UP or DOWN with a confidence score.
+
+**14 Technical Features:**
+
+| Feature | Description | Normalization |
+|---------|-------------|---------------|
+| RSI | Relative Strength Index (momentum) | /100 |
+| MACD | Moving Average Convergence Divergence | /price |
+| MACD Signal | MACD signal line | /price |
+| MACD Histogram | MACD - Signal | /price |
+| EMA Ratio | Price / 20-period EMA | -1 (center) |
+| Volatility | Rolling std dev of returns | raw |
+| Volume Spike | Current / average volume | -1 (center) |
+| Momentum | 10-period rate of change | raw |
+| Bollinger Position | Position within Bollinger Bands | -1 to 1 |
+| ADX | Average Directional Index (trend strength) | /100 |
+| ATR | Average True Range | /price |
+| Volatility Regime | Volatility percentile | 0 to 1 |
+| Price Acceleration | 2nd derivative of price | x100 |
+| Range Position | Position in recent high/low range | -1 to 1 |
+
+**Explainability:** Every prediction includes SHAP values for the top 3 contributing features, showing what drove the decision and in which direction.
+
+**Data source:** Birdeye API (primary) for 1-minute OHLCV candles. CoinGecko (fallback) for hourly candles if Birdeye is unavailable.
+
+## Policy Design
+
+Two Zerion policies created via `zerion agent create-policy`:
+
+### solana-lock
+
+```bash
+zerion agent create-policy --name solana-lock --chains solana
+```
+
+Restricts the agent to Solana only. Any transaction targeting a different chain is rejected at the OWS level before signing. This prevents misconfiguration or bugs from causing trades on unintended networks.
+
+### safe-trading
+
+```bash
+zerion agent create-policy --name safe-trading --deny-transfers --deny-approvals --expires 24h
+```
+
+Three constraints in one policy:
+
+- **deny-transfers:** Blocks raw native token transfers. The agent can only interact with DEX contracts (swap), never send tokens to arbitrary addresses. Implemented as an executable policy script that inspects transaction calldata.
+- **deny-approvals:** Blocks ERC-20 `approve()` and `increaseAllowance()` calls. Prevents the agent from granting unlimited token spending to contracts.
+- **expires 24h:** Agent token auto-expires after 24 hours. Requires manual renewal, limiting the blast radius of a compromised token.
+
+**Enforcement model:** Fail-closed. The policy dispatcher runs all scripts sequentially with AND semantics. If any script fails to load, throws an error, or returns `allow: false`, the transaction is blocked. There is no fallback or bypass.
 
 ## Telegram Commands
 
 | Command | Description |
 |---------|-------------|
-| `/predict` | Get ML prediction for SOL/USDC with SHAP explanation |
-| `/trade <amount>` | Execute swap based on prediction (UP = buy SOL, DOWN = sell SOL) |
-| `/status` | Show wallet portfolio and balances |
-| `/policy` | Show active trading policies |
+| `/predict` | Fetch live market data, compute features, run ML inference, return prediction with SHAP explanation |
+| `/trade <amount>` | Get prediction, check confidence threshold (55%), execute swap via Zerion CLI if signal is strong |
+| `/status` | Show wallet portfolio and token balances |
+| `/policy` | Display active policies and their rules |
 | `/help` | List available commands |
 
-## ML Model
+**Trade logic:** If the model predicts UP, the bot swaps USDC to SOL (buy). If DOWN, it swaps SOL to USDC (sell). Trades below the confidence threshold are skipped unless the user appends `force`.
 
-- **Type**: XGBoost binary classifier (UP/DOWN)
-- **Features (14)**: RSI, MACD (line/signal/histogram), EMA ratio, volatility, volume spike, momentum, Bollinger position, ADX, ATR, volatility regime, price acceleration, range position
-- **Data**: 150 one-minute candles from Birdeye API (SOL/USDC)
-- **Explainability**: SHAP TreeExplainer shows top 3 features driving each prediction
-
-## Policies
-
-Two scoped Zerion policies govern all agent activity:
-
-1. **solana-lock** -- Chain restriction. The agent can only operate on Solana. Transactions targeting any other chain are rejected by OWS before signing.
-
-2. **safe-trading** -- Execution constraints:
-   - `deny-transfers`: Blocks raw SOL transfers. The agent can only interact with DEX contracts (swap), not send tokens to arbitrary addresses.
-   - `deny-approvals`: Blocks unlimited ERC-20/SPL token approvals, preventing token draining attacks.
-   - `expires 24h`: Agent token auto-expires after 24 hours, requiring manual renewal.
-
-All policies use fail-closed enforcement: if a policy script fails to load or execute, the transaction is blocked.
-
-## Setup
+## Quickstart
 
 ### Prerequisites
-- Node.js 20+
-- Python 3.10+
-- Zerion API key ([dashboard.zerion.io](https://dashboard.zerion.io))
-- Telegram bot token ([@BotFather](https://t.me/BotFather))
-- Birdeye API key ([birdeye.so](https://birdeye.so))
 
-### 1. Install dependencies
+- Node.js 20+, Python 3.10+
+- [Zerion API key](https://dashboard.zerion.io)
+- [Telegram bot token](https://t.me/BotFather)
+- [Birdeye API key](https://birdeye.so)
+
+### Setup
 
 ```bash
+# Install
 npm install
 cd ml && pip install -r requirements.txt && cd ..
-```
 
-### 2. Configure environment
-
-```bash
+# Configure
 cp .env.example .env
-# Edit .env with your API keys
-```
+# Fill in ZERION_API_KEY, TELEGRAM_BOT_TOKEN, BIRDEYE_API_KEY
 
-### 3. Create wallet
-
-```bash
+# Create wallet
 node cli/zerion.js wallet create --name main
-# Save the passphrase securely
-```
 
-### 4. Fund wallet
-
-Send SOL (for gas) and USDC to your Solana address:
-```bash
+# Fund wallet with SOL (gas) + USDC
 node cli/zerion.js wallet fund --wallet main
-```
 
-### 5. Create policies and agent token
-
-```bash
+# Create policies and agent token
 ./scripts/setup-policies.sh
 ./scripts/setup-token.sh main
-```
 
-### 6. Start services
-
-Terminal 1 -- ML service:
-```bash
+# Start ML service (terminal 1)
 cd ml && uvicorn server:app --port 8002
-```
 
-Terminal 2 -- Telegram bot:
-```bash
+# Start Telegram bot (terminal 2)
 node bot/index.js
 ```
 
-### 7. Trade
+### Test
 
-Open your Telegram bot and send `/predict` to get a signal, then `/trade 1` to execute a $1 swap.
+1. Open your Telegram bot
+2. Send `/predict` to see ML analysis
+3. Send `/trade 1` to execute a $1 swap
+4. Send `/policy` to verify guardrails
 
 ## Project Structure
 
 ```
 zerion-agent/
-  cli/              # Zerion CLI (forked from zeriontech/zerion-ai)
-  ml/               # Python ML prediction service
-    server.py       # FastAPI endpoints
-    prediction.py   # XGBoost inference + SHAP
-    indicators.py   # Technical indicator calculations
-    data_source.py  # Birdeye/CoinGecko OHLCV fetcher
-    models/         # Trained model bundle
-  bot/              # Telegram bot (Node.js)
-    index.js        # Entry point
-    commands.js     # Command handlers
-    zerion-bridge.js # CLI subprocess wrapper
-    ml-client.js    # ML service HTTP client
-    formatter.js    # Telegram message formatting
-  scripts/          # Setup automation
+  cli/                   # Zerion CLI (forked, used as subprocess)
+  ml/
+    server.py            # FastAPI prediction endpoints
+    prediction.py        # XGBoost inference + SHAP
+    indicators.py        # 14 technical indicator calculations
+    data_source.py       # Birdeye/CoinGecko OHLCV fetcher
+    models/              # Trained model bundle (.joblib)
+  bot/
+    index.js             # Telegram bot entry point
+    commands.js          # Command handlers (/predict, /trade, /status, /policy)
+    zerion-bridge.js     # Spawns Zerion CLI, parses JSON output
+    ml-client.js         # HTTP client for ML service
+    formatter.js         # Telegram message formatting
+  scripts/
+    setup-policies.sh    # Create Zerion policies
+    setup-token.sh       # Create agent token with policies
 ```
+
+## Tech Stack
+
+- **Zerion CLI** -- Wallet management, policy enforcement, swap execution
+- **Python / FastAPI** -- ML prediction service
+- **XGBoost + SHAP** -- Classification model with explainability
+- **Node.js** -- Telegram bot and CLI bridge
+- **Birdeye API** -- Live Solana market data
+- **Solana** -- Target blockchain for on-chain swaps
 
 ## License
 
