@@ -1,10 +1,12 @@
 # Zerion AI Trading Agent
 
-> Zerion CLI Track Submission -- Autonomous AI trading agent that uses ML predictions to execute real on-chain swaps on Solana, governed by scoped Zerion policies. Interface: Telegram bot.
+> Zerion CLI Track Submission -- Autonomous AI trading agent that uses ML predictions to trade SOL/USDC on Solana, governed by scoped Zerion policies. Includes paper trading mode with live market data. Interface: Telegram bot.
 
 ## What Is This
 
-A trading agent built on top of the [Zerion CLI](https://github.com/zeriontech/zerion-ai) that combines machine learning with on-chain execution. The agent fetches live SOL/USDC market data, runs an XGBoost classifier to predict price direction, explains its reasoning via SHAP, and executes real swaps through the Zerion API -- all within policy guardrails that limit what the agent can do.
+A trading agent built on top of the [Zerion CLI](https://github.com/zeriontech/zerion-ai) that combines machine learning with on-chain execution. The agent fetches live SOL/USDC market data, runs an XGBoost classifier to predict price direction, explains its reasoning via SHAP, and trades through the Zerion API -- all within policy guardrails that limit what the agent can do.
+
+The bot operates in **paper trading mode** by default: it uses real live market data from Birdeye, real ML predictions, and real Zerion policy enforcement, but records trades in a local portfolio instead of broadcasting on-chain. When a funded wallet and agent token are configured, the same bot can execute real on-chain swaps with zero code changes.
 
 Users interact through a Telegram bot. No frontend needed -- the bot handles predictions, trade execution, portfolio monitoring, and policy inspection.
 
@@ -51,11 +53,11 @@ Users interact through a Telegram bot. No frontend needed -- the bot handles pre
 
 | Criteria | What We Built |
 |----------|---------------|
-| **Onchain Functionality** | Real SOL/USDC swaps on Solana mainnet via `zerion swap`. Transactions are signed by OWS and routed through Jupiter. At least 1 real on-chain tx executed. |
+| **Onchain Functionality** | Full swap pipeline via `zerion swap` (wallet, policies, agent token, execution). Paper trading mode uses real live prices from Birdeye API. With a funded wallet, executes real on-chain swaps on Solana mainnet via Jupiter routing. |
 | **Policy Design** | Two scoped Zerion policies: `solana-lock` (chain restriction) and `safe-trading` (deny-transfers + deny-approvals + 24h expiry). Fail-closed enforcement -- any policy failure blocks the tx. |
 | **Real-World Applicability** | Solves a real problem: autonomous trading with safety rails. The ML model provides data-driven signals with explainability (SHAP). Policies prevent the agent from draining funds or operating outside its scope. |
 | **Code Quality** | Modular architecture: ML service (Python), bot (Node.js), CLI (fork). Clean separation of concerns. No monolith. Each component is independently testable. |
-| **Demo Quality** | Telegram bot provides an interactive demo. Send `/predict` to see ML analysis, `/trade 1` to execute a real swap, `/policy` to inspect guardrails. |
+| **Demo Quality** | Telegram bot provides an interactive demo. Send `/predict` for ML analysis, `/trade 10` to paper trade, `/status` for P&L tracking, `/history` for trade log, `/policy` to inspect guardrails. |
 
 ## Zerion Integration
 
@@ -138,12 +140,16 @@ Three constraints in one policy:
 | Command | Description |
 |---------|-------------|
 | `/predict` | Fetch live market data, compute features, run ML inference, return prediction with SHAP explanation |
-| `/trade <amount>` | Get prediction, check confidence threshold (55%), execute swap via Zerion CLI if signal is strong |
-| `/status` | Show wallet portfolio and token balances |
-| `/policy` | Display active policies and their rules |
+| `/trade <amount>` | Get prediction, check confidence threshold (55%), execute paper trade using live price |
+| `/status` | Show paper portfolio balances, total value, and P&L |
+| `/history` | Show last 10 trades with timestamps, direction, amounts, and prices |
+| `/reset` | Reset portfolio to seed balances (100 USDC + 0.5 SOL) |
+| `/policy` | Display active Zerion policies and their rules |
 | `/help` | List available commands |
 
-**Trade logic:** If the model predicts UP, the bot swaps USDC to SOL (buy). If DOWN, it swaps SOL to USDC (sell). Trades below the confidence threshold are skipped unless the user appends `force`.
+**Trade logic:** If the model predicts UP, the bot buys SOL with USDC. If DOWN, it sells SOL for USDC. Trades below the confidence threshold are skipped unless the user appends `force`.
+
+**Paper trading:** The default mode uses real live prices from Birdeye but records trades locally instead of broadcasting. The portfolio starts with 100 USDC + 0.5 SOL and tracks P&L against the seed value.
 
 ## Quickstart
 
@@ -186,8 +192,10 @@ node bot/index.js
 
 1. Open your Telegram bot
 2. Send `/predict` to see ML analysis
-3. Send `/trade 1` to execute a $1 swap
-4. Send `/policy` to verify guardrails
+3. Send `/trade 10` to paper trade 10 USDC
+4. Send `/status` to see portfolio and P&L
+5. Send `/history` to see trade log
+6. Send `/policy` to verify guardrails
 
 ## Project Structure
 
@@ -202,10 +210,13 @@ zerion-agent/
     models/              # Trained model bundle (.joblib)
   bot/
     index.js             # Telegram bot entry point
-    commands.js          # Command handlers (/predict, /trade, /status, /policy)
+    commands.js          # Command handlers (/predict, /trade, /status, /history, /policy)
+    paper-portfolio.js   # Paper trading engine with P&L tracking
     zerion-bridge.js     # Spawns Zerion CLI, parses JSON output
     ml-client.js         # HTTP client for ML service
     formatter.js         # Telegram message formatting
+  data/
+    portfolio.json       # Paper trading state (gitignored)
   scripts/
     setup-policies.sh    # Create Zerion policies
     setup-token.sh       # Create agent token with policies
