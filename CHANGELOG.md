@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.0.0 (2026-05-11)
+
+
+### Features
+
+* **bot:** add ml service http client ([a0e05f8](https://github.com/sarthakbiswas97/zerion-agent/commit/a0e05f882d88ff42dd3d0b46652e9b24cd87e8b2))
+* **bot:** add telegram bot entry point ([e0888c2](https://github.com/sarthakbiswas97/zerion-agent/commit/e0888c28710531c0df16d882214c431d2d96d73e))
+* **bot:** add telegram command handlers ([ccd40db](https://github.com/sarthakbiswas97/zerion-agent/commit/ccd40db35bd15d15d604d3f6e48c1a3278d33122))
+* **bot:** add telegram message formatter ([dc67435](https://github.com/sarthakbiswas97/zerion-agent/commit/dc674353d69d04607ad0a9cdb1a5e7aaba849238))
+* **bot:** add zerion cli bridge for subprocess execution ([0d0df0c](https://github.com/sarthakbiswas97/zerion-agent/commit/0d0df0c27ef0ce497dd268ce41f6b25e6fc2d9fd))
+* **ml:** add birdeye ohlcv data source with coingecko fallback ([9888608](https://github.com/sarthakbiswas97/zerion-agent/commit/988860877b509bc6544952edef4b21b8fa15d6af))
+* **ml:** add fastapi prediction server ([60eb754](https://github.com/sarthakbiswas97/zerion-agent/commit/60eb7544a2d31623f931a5f0a76b2852fe263016))
+* **ml:** add prediction service with shap explanations ([5af5607](https://github.com/sarthakbiswas97/zerion-agent/commit/5af5607d53469c8929e83962e46b89f699298ed7))
+* **ml:** add technical indicator calculations ([782c04c](https://github.com/sarthakbiswas97/zerion-agent/commit/782c04c10f5e1c531130287d17369ae7aa4f627e))
+* **ml:** add trained xgboost model bundle ([fda348f](https://github.com/sarthakbiswas97/zerion-agent/commit/fda348fc7d0937936e0eb2aad0d046965eddb16c))
+* **scripts:** add policy and agent token setup scripts ([0043369](https://github.com/sarthakbiswas97/zerion-agent/commit/0043369a90399b86a74b9b393410114e02a21b33))
+
 ## [1.1.0](https://github.com/zeriontech/zerion-ai/compare/v1.0.1...v1.1.0) (2026-05-08)
 
 
